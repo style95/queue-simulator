@@ -32,6 +32,9 @@ class QueueSimulator(scaler: Scaler,
   private var inSinceLastTick = 0
   private var outSinceLastTick = 0
 
+  private var scheduledNum = 0
+  private var averageLatency = 0.0
+
   private var requester: Option[ActorRef] = None
 
   system.scheduler.schedule(0 seconds, checkInterval) {
@@ -56,7 +59,7 @@ class QueueSimulator(scaler: Scaler,
       tryRunAction()
     case ConsultScaler =>
       println(
-        s"in: $inSinceLastTick, current: ${queue.size}, out: $outSinceLastTick, existing: ${existing.size}, inProgress: ${inProgress.size}")
+        s"in: $inSinceLastTick, current: ${queue.size}, out: $outSinceLastTick, existing: ${existing.size}, inProgress: ${inProgress.size}, averageLatency: $averageLatency")
 
       val decision = scaler.decide(
         DecideInfo(inSinceLastTick,
@@ -87,6 +90,11 @@ class QueueSimulator(scaler: Scaler,
 
           queue = newQueue
           existing += idle -> ContainerStatus(false)
+
+          val latency = (System.nanoTime() - msg.startTime) / 1e6
+          scheduledNum += 1
+          averageLatency += 1.0 / scheduledNum * (latency - averageLatency)
+
           idle ! msg
         case _ =>
       }
