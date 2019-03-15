@@ -13,12 +13,14 @@ object QueueSimulator {
   final case object ConsultScaler
 
   def props(scaler: Scaler,
+            logger: ActorRef,
             checkInterval: FiniteDuration,
             containerProps: ContainerProperty): Props =
-    Props(new QueueSimulator(scaler, checkInterval, containerProps))
+    Props(new QueueSimulator(scaler, logger, checkInterval, containerProps))
 }
 
 class QueueSimulator(scaler: Scaler,
+                     logger: ActorRef,
                      checkInterval: FiniteDuration,
                      containerProps: ContainerProperty)
     extends Actor {
@@ -28,15 +30,15 @@ class QueueSimulator(scaler: Scaler,
 
   private var queue = Queue.empty[ActivationMessage]
   private var existing = Map.empty[ActorRef, ContainerStatus]
-  private var inProgress = Set.empty[ActorRef]
+  private var creating = Set.empty[ActorRef]
 
   private var inSinceLastTick = 0
   private var outSinceLastTick = 0
 
   private var scheduledNum = 0
-  private var averageLatency = 0.0
+  private var averageLatency = Double.NaN
 
-  private var requester: Option[ActorRef] = None
+  private var elapsedMs = 0L
 
   system.scheduler.schedule(0 seconds, checkInterval) {
     self ! ConsultScaler
@@ -44,37 +46,40 @@ class QueueSimulator(scaler: Scaler,
 
   override def receive: Receive = {
     case msg: ActivationMessage =>
-      requester = Some(sender)
-
       inSinceLastTick += 1
       queue = queue.enqueue(msg)
       tryRunActions()
     case ContainerCreated =>
-      inProgress -= sender
+      creating -= sender
       existing += sender -> ContainerStatus(true)
       tryRunActions()
-    case done: WorkDone =>
+    case WorkDone(msg @ ActivationMessage(requester, _)) =>
       outSinceLastTick += 1
       existing += sender -> ContainerStatus(true)
-      requester.get ! done
+      requester ! msg
       tryRunActions()
     case ConsultScaler =>
-      println(
-        s"in: $inSinceLastTick, current: ${queue.size}, out: $outSinceLastTick, existing: ${existing.size}, inProgress: ${inProgress.size}, averageLatency: $averageLatency")
+      elapsedMs += checkInterval.toMillis
+      logger ! StatusLogger.Status(elapsedMs,
+                                   inSinceLastTick,
+                                   outSinceLastTick,
+                                   queue.size,
+                                   existing.size,
+                                   creating.size,
+                                   averageLatency)
 
-      val decision = scaler.decide(
+      scaler.decide(
         DecideInfo(inSinceLastTick,
                    outSinceLastTick,
                    existing.size,
-                   inProgress.size,
-                   queue.size))
-      decision match {
+                   creating.size,
+                   queue.size)) match {
         case AddContainer(number) =>
           println(s"create $number containers")
           (1 to number) foreach { _ =>
             val container =
               context.actorOf(Container.props(self, containerProps))
-            inProgress += container
+            creating += container
           }
         case NoOp =>
       }
@@ -93,8 +98,9 @@ class QueueSimulator(scaler: Scaler,
       queue = newQueue
       existing += idle -> ContainerStatus(false)
 
-      val latency = (System.nanoTime() - msg.startTime) / 1e6
+      val latency = (System.nanoTime() - msg.userStart) / 1e6
       scheduledNum += 1
+      if (averageLatency.isNaN) { averageLatency = 0.0 }
       averageLatency += 1.0 / scheduledNum * (latency - averageLatency)
 
       idle ! msg

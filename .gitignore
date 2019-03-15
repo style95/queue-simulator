@@ -25,3 +25,9 @@ gradle-app.setting
 *.iml
 out
 gen
+
+# generated files
+algorithm-simulator/out/*
+
+# jupyter notebook
+log-visualizer/.ipynb_checkpoints

@@ -20,7 +20,7 @@ class LoadGenerator(simulator: ActorRef, tps: Int) extends Actor with Timers {
 
   override def receive: Receive = {
     case MessageTick =>
-      simulator ! ActivationMessage(System.nanoTime())
+      simulator ! ActivationMessage(self, System.nanoTime())
     case WorkDone =>
   }
 }
