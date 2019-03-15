@@ -22,6 +22,7 @@ class QueueSimulator(scaler: Scaler,
                      checkInterval: FiniteDuration,
                      containerProps: ContainerProperty)
     extends Actor {
+
   import Scaler._
   import context.{system, dispatcher}
 
@@ -47,16 +48,16 @@ class QueueSimulator(scaler: Scaler,
 
       inSinceLastTick += 1
       queue = queue.enqueue(msg)
-      tryRunAction()
+      tryRunActions()
     case ContainerCreated =>
       inProgress -= sender
       existing += sender -> ContainerStatus(true)
-      tryRunAction()
+      tryRunActions()
     case done: WorkDone =>
       outSinceLastTick += 1
       existing += sender -> ContainerStatus(true)
       requester.get ! done
-      tryRunAction()
+      tryRunActions()
     case ConsultScaler =>
       println(
         s"in: $inSinceLastTick, current: ${queue.size}, out: $outSinceLastTick, existing: ${existing.size}, inProgress: ${inProgress.size}, averageLatency: $averageLatency")
@@ -82,27 +83,27 @@ class QueueSimulator(scaler: Scaler,
       outSinceLastTick = 0
   }
 
-  private def tryRunAction(): Unit =
-    if (queue.nonEmpty) {
-      idleContainer match {
-        case Some(idle) =>
-          val (msg, newQueue) = queue.dequeue
+  private def tryRunActions(): Unit = {
+    val idles = idleContainers.iterator
 
-          queue = newQueue
-          existing += idle -> ContainerStatus(false)
+    while (queue.nonEmpty && idles.hasNext) {
+      val (msg, newQueue) = queue.dequeue
+      val idle = idles.next()
 
-          val latency = (System.nanoTime() - msg.startTime) / 1e6
-          scheduledNum += 1
-          averageLatency += 1.0 / scheduledNum * (latency - averageLatency)
+      queue = newQueue
+      existing += idle -> ContainerStatus(false)
 
-          idle ! msg
-        case _ =>
-      }
+      val latency = (System.nanoTime() - msg.startTime) / 1e6
+      scheduledNum += 1
+      averageLatency += 1.0 / scheduledNum * (latency - averageLatency)
+
+      idle ! msg
     }
+  }
 
-  private def idleContainer: Option[ActorRef] =
+  private def idleContainers =
     existing
-      .find {
+      .filter {
         case (_, ContainerStatus(ready)) => ready
       }
       .map {
