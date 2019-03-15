@@ -27,7 +27,7 @@ mainClassName = 'style95.Simulator'
 
 task runSimulator(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'style95.Simulator'
+    main = 'style95.Run'
 
     args = []
     if(project.hasProperty('inMsg')){
