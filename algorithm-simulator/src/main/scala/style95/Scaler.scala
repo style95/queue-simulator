@@ -5,7 +5,7 @@ object Scaler {
       income: Int, // new requests since last tick
       outcome: Int, // consumed requests since last tick
       existing: Int, // created containers, busy or idle
-      inProgress: Int, // containers that are being initialized
+      creating: Int, // containers that are being initialized
       current: Int)
 
   sealed trait Decision

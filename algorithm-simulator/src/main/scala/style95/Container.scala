@@ -6,9 +6,9 @@ import style95.Container.ContainerProperty
 import scala.concurrent.duration._
 
 object Container {
-  final case class ActivationMessage(startTime: Long)
+  final case class ActivationMessage(requester: ActorRef, userStart: Long)
 
-  final case class WorkDone(startTime: Long)
+  final case class WorkDone(message: ActivationMessage)
 
   final case class ContainerStatus(ready: Boolean)
 
@@ -32,9 +32,9 @@ class Container(val simulator: ActorRef, property: ContainerProperty)
   }
 
   override def receive: Receive = {
-    case ActivationMessage(start) =>
+    case msg: ActivationMessage =>
       system.scheduler.scheduleOnce(property.execTime) {
-        simulator ! WorkDone(start)
+        simulator ! WorkDone(msg)
       }
   }
 }

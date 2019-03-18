@@ -39,4 +39,10 @@ task runSimulator(type: JavaExec) {
     if(project.hasProperty('create')){
         args += create
     }
+    if(project.hasProperty('running')){
+        args += running
+    }
+    if(project.hasProperty('outpath')){
+        args += outpath
+    }
 }
