@@ -2,7 +2,6 @@ group 'style95'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'scala'
-apply plugin: 'application'
 
 repositories {
     mavenCentral()
@@ -34,15 +33,12 @@ tasks.withType(ScalaCompile) {
     scalaCompileOptions.additionalParameters = gradle.scala.compileFlags
 }
 
-mainClassName = 'style95.Simulator'
-
 task runScenario(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
 
-    if (!project.hasProperty("scenario")) {
-        throw new GradleScriptException("runScenario task should a Pscenario argument")
+    if (project.hasProperty("scenario")) {
+        main = 'style95.scenarios.' + scenario
     }
-    main = 'style95.scenarios.' + scenario
 
     args = []
     if(project.hasProperty('exec')){
