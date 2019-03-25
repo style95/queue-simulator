@@ -8,11 +8,11 @@ object RampUpThenDown extends ScenarioBase {
     ScenarioBuilder startsWith {
       DoNothing in 5.seconds
     } next {
-      Transition(0, 100) in 5.seconds
+      Transition(1, 100) in 5.seconds
     } next {
       Maintain(100) in 10.seconds
     } next {
-      Transition(100, 0) in 5.seconds
+      Transition(100, 1) in 5.seconds
     } next {
       DoNothing in 5.seconds
     }

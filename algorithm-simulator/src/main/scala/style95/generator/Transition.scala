@@ -18,13 +18,12 @@ class CompleteTransition private[generator](startTps: Int,
   class Behavior extends BehaviorDescriptor {
     class Gen extends TimingGenerator {
       def next(elapsed: FiniteDuration): FiniteDuration = {
-        require(startTps >= 0 && endTps >= 0, "tps should be positive")
+        require(startTps >= 1 && endTps >= 1, "tps should be at least one")
 
         val tps = lerp(startTps, endTps, elapsed / duration)
         // avoid log(0)
-        // avoid zero division
         // please refer to https://preshing.com/20111007/how-to-generate-random-timings-for-a-poisson-process/
-        (-log(1.0 - random()) / (tps + 1e-6)) seconds
+        (-log(1.0 - random()) / tps) seconds
       }
       // lerp: linear interpolation
       private def lerp(start: Double, end: Double, t: Double) =
