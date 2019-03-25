@@ -12,9 +12,7 @@ class SequentialBehaviorActor(behaviors: List[IntervalBehavior],
     extends Actor
     with ActorLogging {
 
-  override def preStart(): Unit = {
-    setupRemaining(behaviors)
-  }
+  setupRemaining(behaviors)
 
   override def receive: Receive = Actor.emptyBehavior
 

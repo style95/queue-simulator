@@ -23,9 +23,9 @@ class SingleBehaviorActor(behavior: IntervalBehavior, receiver: ActorRef)
   import SingleBehaviorActor._
   import context.{dispatcher, system}
 
-  private var timingGen: TimingGenerator = _
-  private var start: Long = _
-  private var preGeneratedHits: Queue[Long] = _
+  private val timingGen = behavior.behavior.timing
+  private val start = System.nanoTime()
+  private var preGeneratedHits = Queue.empty[Long]
 
   // Generate hits at frequently as possible. The more frequent ticks are generated,
   // the closer they conform to Poisson distribution
@@ -34,18 +34,11 @@ class SingleBehaviorActor(behavior: IntervalBehavior, receiver: ActorRef)
   log.info(s"the timing accuracy of the actor scheduler is $schedulerPrecision")
   timers.startPeriodicTimer(TickKey, GenerateHits, schedulerPrecision)
 
-  override def preStart(): Unit = {
-    // Reset state on start/restart
-    timingGen = behavior.behavior.timing
-    start = System.nanoTime()
-    preGeneratedHits = Queue.empty[Long]
-
-    log.info(s"load generator will send requests to ${receiver.path.name}")
-    system.scheduler.scheduleOnce(behavior.duration) {
-      log.info(
-        s"Interval ${behavior.duration} expired, shutting down actor ${self.path.name}")
-      self ! PoisonPill
-    }
+  log.info(s"load generator will send requests to ${receiver.path.name}")
+  system.scheduler.scheduleOnce(behavior.duration) {
+    log.info(
+      s"Interval ${behavior.duration} expired, shutting down actor ${self.path.name}")
+    self ! PoisonPill
   }
 
   override def receive: Receive = {

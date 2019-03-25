@@ -28,7 +28,7 @@ class SequentialBehaviorActorSpec
 
     "A sequence behavior that consists of multiple behaviors" should {
       "be verifiable with mean TPS test" in {
-        val (low, high, secsPerStage) = (0, 300, 10)
+        val (low, high, secsPerStage) = (1, 300, 10)
         val sequence = ScenarioBuilder startsWith {
           Transition(low, high) in secsPerStage.seconds
         } next {
