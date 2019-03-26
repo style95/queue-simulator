@@ -6,8 +6,9 @@ import style95.QueueSimulator.ConsultScaler
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
 import Container._
+import style95.StatusLogger.ActivationRecord
+import style95.scaler._
 
 object QueueSimulator {
   final case object ConsultScaler
@@ -25,9 +26,9 @@ class QueueSimulator(scaler: Scaler,
                      containerProps: ContainerProperty)
     extends Actor {
 
-  import Scaler._
   import context.{system, dispatcher}
 
+  private val simStart = System.nanoTime()
   private var queue = Queue.empty[ActivationMessage]
   private var existing = Map.empty[ActorRef, ContainerStatus]
   private var creating = Set.empty[ActorRef]
@@ -37,8 +38,6 @@ class QueueSimulator(scaler: Scaler,
 
   private var scheduledNum = 0
   private var averageLatency = Double.NaN
-
-  private var elapsedMs = 0L
 
   system.scheduler.schedule(0 seconds, checkInterval) {
     self ! ConsultScaler
@@ -53,27 +52,29 @@ class QueueSimulator(scaler: Scaler,
       creating -= sender
       existing += sender -> ContainerStatus(true)
       tryRunActions()
-    case WorkDone(msg @ ActivationMessage(requester, _)) =>
+    case WorkDone(msg @ ActivationMessage(requester, start, invoked)) =>
       outSinceLastTick += 1
       existing += sender -> ContainerStatus(true)
       requester ! msg
+      logger ! ActivationRecord(elapsed,
+                                invoked - start,
+                                System.nanoTime() - invoked)
       tryRunActions()
     case ConsultScaler =>
-      elapsedMs += checkInterval.toMillis
-      logger ! StatusLogger.Status(elapsedMs,
-                                   inSinceLastTick,
-                                   outSinceLastTick,
-                                   queue.size,
-                                   existing.size,
-                                   creating.size,
-                                   averageLatency)
+      logger ! StatusLogger.QueueSnapshot(elapsed,
+                                          inSinceLastTick,
+                                          outSinceLastTick,
+                                          queue.size,
+                                          existing.size,
+                                          creating.size,
+                                          averageLatency)
 
       scaler.decide(
-        DecideInfo(inSinceLastTick,
-                   outSinceLastTick,
-                   existing.size,
-                   creating.size,
-                   queue.size)) match {
+        DecisionInfo(inSinceLastTick,
+                     outSinceLastTick,
+                     existing.size,
+                     creating.size,
+                     queue.size)) match {
         case AddContainer(number) =>
           println(s"create $number containers")
           (1 to number) foreach { _ =>
@@ -103,7 +104,7 @@ class QueueSimulator(scaler: Scaler,
       if (averageLatency.isNaN) { averageLatency = 0.0 }
       averageLatency += 1.0 / scheduledNum * (latency - averageLatency)
 
-      idle ! msg
+      idle ! msg.invokeAt(System.nanoTime())
     }
   }
 
@@ -115,4 +116,7 @@ class QueueSimulator(scaler: Scaler,
       .map {
         case (actor, _) => actor
       }
+
+  private def elapsed: Long = System.nanoTime() - simStart
+
 }

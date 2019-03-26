@@ -41,13 +41,13 @@ task runScenario(type: JavaExec) {
     }
 
     args = []
+    if(project.hasProperty('outDir')){
+        args += outDir
+    }
     if(project.hasProperty('exec')){
         args += exec
     }
-    if(project.hasProperty('create')){
+    if(project.hasProperty('create')) {
         args += create
-    }
-    if(project.hasProperty('outpath')){
-        args += outpath
     }
 }

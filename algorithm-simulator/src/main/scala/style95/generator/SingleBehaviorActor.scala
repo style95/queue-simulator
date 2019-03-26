@@ -43,7 +43,7 @@ class SingleBehaviorActor(behavior: IntervalBehavior, receiver: ActorRef)
 
   override def receive: Receive = {
     case SendRequest =>
-      receiver ! ActivationMessage(self, System.nanoTime())
+      receiver ! ActivationMessage(self, System.nanoTime(), 0)
     case GenerateHits =>
       // Akka scheduler has limited timing precision. To compensate the coarse timing,
       // we may need to fire multiple hits in one tick so that the desired level of

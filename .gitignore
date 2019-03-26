@@ -31,3 +31,4 @@ algorithm-simulator/out/*
 
 # jupyter notebook
 log-visualizer/.ipynb_checkpoints
+log-visualizer/__pycache__
