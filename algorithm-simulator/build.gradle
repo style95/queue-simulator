@@ -2,14 +2,18 @@ group 'style95'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'scala'
-apply plugin: 'application'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile "org.scala-lang:scala-library:${gradle.scala.version}"
+    implementation "org.scala-lang:scala-library:${gradle.scala.version}"
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.scalatest:scalatest_2.12:3.0.5'
+
+    testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
 
     compile 'com.typesafe.akka:akka-actor_2.12:2.5.12'
     compile 'com.typesafe.akka:akka-stream_2.12:2.5.12'
@@ -17,30 +21,31 @@ dependencies {
     compile 'com.typesafe.akka:akka-remote_2.12:2.5.12'
     compile 'com.typesafe.akka:akka-http-core_2.12:10.1.1'
     compile 'com.typesafe.akka:akka-http-spray-json_2.12:10.1.1'
+
+    compile group: 'com.typesafe.akka', name: 'akka-testkit_2.12', version: '2.5.12'
+}
+
+test {
+    maxParallelForks = Runtime.runtime.availableProcessors()
 }
 
 tasks.withType(ScalaCompile) {
     scalaCompileOptions.additionalParameters = gradle.scala.compileFlags
 }
 
-mainClassName = 'style95.Simulator'
-
-task runSimulator(type: JavaExec) {
+task runScenario(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'style95.Run'
+
+    if (project.hasProperty("scenario")) {
+        main = 'style95.scenarios.' + scenario
+    }
 
     args = []
-    if(project.hasProperty('inMsg')){
-        args += inMsg
-    }
     if(project.hasProperty('exec')){
         args += exec
     }
     if(project.hasProperty('create')){
         args += create
-    }
-    if(project.hasProperty('running')){
-        args += running
     }
     if(project.hasProperty('outpath')){
         args += outpath
