@@ -1,6 +1,8 @@
 package style95.scenarios
 
 import style95.generator._
+import style95.scaler._
+
 import scala.concurrent.duration._
 
 object RampUpThenDown extends ScenarioBase {
@@ -16,4 +18,7 @@ object RampUpThenDown extends ScenarioBase {
     } next {
       DoNothing in 5.seconds
     }
+
+  override def scaler: Scaler = new DefaultScaler(1000)
+
 }

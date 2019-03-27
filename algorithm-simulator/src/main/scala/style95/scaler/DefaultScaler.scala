@@ -1,30 +1,14 @@
-package style95
+package style95.scaler
 
-object Scaler {
-  final case class DecideInfo(
-      income: Int, // new requests since last tick
-      outcome: Int, // consumed requests since last tick
-      existing: Int, // created containers, busy or idle
-      creating: Int, // containers that are being initialized
-      current: Int)
-
-  sealed trait Decision
-
-  final case class AddContainer(number: Int) extends Decision
-  final case object NoOp extends Decision
-}
-
-class Scaler(containerLimit: Int) {
-  import Scaler._
-
+class DefaultScaler(containerLimit: Int) extends Scaler {
   private var tick = 0
   private var totalIncome = 0
   private var totalConsumption = 0
   private var perConConsumptionPerTick = 0.0
   private var maxConsumptionInTick = -1.0
 
-  def decide(info: DecideInfo): Decision = {
-    var DecideInfo(income, outcome, existing, inProgress, current) = info
+  override def decide(info: DecisionInfo): Decision = {
+    var DecisionInfo(income, outcome, existing, inProgress, current) = info
 
     totalIncome += income
     totalConsumption += outcome
