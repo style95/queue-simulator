@@ -19,6 +19,6 @@ object RampUpThenDown extends ScenarioBase {
       DoNothing in 5.seconds
     }
 
-  override def scaler: Scaler = new FirstScaler(1000)
+  override def scaler: Scaler = new DefaultScaler(1000)
 
 }

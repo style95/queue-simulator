@@ -8,5 +8,5 @@ import scala.concurrent.duration._
 object Demo extends ScenarioBase {
   override def actorBuilder: BehaviorActorBuilder = Maintain(10) in 10.seconds
 
-  override def scaler: Scaler = new FirstScaler(1000)
+  override def scaler: Scaler = new DefaultScaler(1000)
 }

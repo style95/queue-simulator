@@ -1,6 +1,6 @@
 package style95.scaler
 
-class FirstScaler(containerLimit: Int) extends Scaler {
+class DefaultScaler(containerLimit: Int) extends Scaler {
   private var tick = 0
   private var totalIncome = 0
   private var totalConsumption = 0
