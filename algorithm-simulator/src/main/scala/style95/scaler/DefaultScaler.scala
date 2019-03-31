@@ -8,22 +8,25 @@ class DefaultScaler(containerLimit: Int) extends Scaler {
   private var maxConsumptionInTick = -1.0
 
   override def decide(info: DecisionInfo): Decision = {
-    var DecisionInfo(income, outcome, existing, inProgress, current) = info
+    var DecisionInfo(_, income, outcome, _, existing, inProgress, current) =
+      info
+
+    val (nExisting, nInProgress) = (existing.size, inProgress.size)
 
     totalIncome += income
     totalConsumption += outcome
 
-    if (existing == 0 && inProgress == 0) {
+    if (nExisting == 0 && nInProgress == 0) {
       return AddContainer(1)
     }
 
     if (totalConsumption > 0) {
       tick += 1
-      perConConsumptionPerTick = totalConsumption.toDouble / existing / tick
+      perConConsumptionPerTick = totalConsumption.toDouble / nExisting / tick
     }
 
     maxConsumptionInTick = math.max(maxConsumptionInTick, outcome)
-    val expectedTpt = perConConsumptionPerTick * (existing + inProgress)
+    val expectedTpt = perConConsumptionPerTick * (nExisting + nInProgress)
 
     println(
       s"perConConsumption: $perConConsumptionPerTick, expectedTpt: $expectedTpt, maxConsumptionInTick: $maxConsumptionInTick")
@@ -31,10 +34,10 @@ class DefaultScaler(containerLimit: Int) extends Scaler {
     val number =
       if (income >= expectedTpt && current > maxConsumptionInTick && expectedTpt != 0) {
 
-        val criteria = (income / perConConsumptionPerTick) - existing - inProgress
+        val criteria = (income / perConConsumptionPerTick) - nExisting - nInProgress
         val number = math.ceil(criteria).toInt
         println(
-          s"criteria: $criteria = ($income / $perConConsumptionPerTick) - $existing - $inProgress")
+          s"criteria: $criteria = ($income / $perConConsumptionPerTick) - $nExisting - $nInProgress")
         number
       } else {
         0
