@@ -1,6 +1,6 @@
 package style95
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, PoisonPill, Props, Timers}
 import style95.Container.ContainerProperty
 
 import scala.concurrent.duration._
@@ -24,15 +24,27 @@ object Container {
   final case class ContainerProperty(initialDelay: FiniteDuration,
                                      execTime: FiniteDuration)
 
+  // a message to instrument a graceful shutdown
+  final case object StopContainer
+
+  final case object ContainerStopped
+
+  private case object DelayKey
+
+  private case class DelayMsg(msg: ActivationMessage)
+
   def props(simulator: ActorRef, property: ContainerProperty): Props =
     Props(new Container(simulator, property))
 }
 
 class Container(val simulator: ActorRef, property: ContainerProperty)
-    extends Actor {
+    extends Actor
+    with Timers {
 
   import Container._
   import context.{system, dispatcher}
+
+  private var tombStone = false
 
   system.scheduler.scheduleOnce(property.initialDelay) {
     simulator ! ContainerCreated
@@ -40,8 +52,13 @@ class Container(val simulator: ActorRef, property: ContainerProperty)
 
   override def receive: Receive = {
     case msg: ActivationMessage =>
-      system.scheduler.scheduleOnce(property.execTime) {
-        simulator ! WorkDone(msg)
+      timers.startSingleTimer(DelayKey, DelayMsg(msg), property.execTime)
+    case DelayMsg(msg) =>
+      simulator ! WorkDone(msg)
+      if (tombStone) {
+        simulator ! ContainerStopped
+        self ! PoisonPill
       }
+    case StopContainer => tombStone = true
   }
 }

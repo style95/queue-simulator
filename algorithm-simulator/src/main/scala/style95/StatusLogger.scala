@@ -22,6 +22,8 @@ object StatusLogger {
       timeOfInvoke: Long // nanoseconds of invocation
   )
 
+  final case class PredictedTps(elapse: Long, tps: Double)
+
   def props(outPath: String): Props = Props(new StatusLogger(outPath))
 }
 
@@ -30,6 +32,7 @@ class StatusLogger(outDir: String) extends Actor with ActorLogging {
 
   private var snapshots = ArrayBuffer.empty[QueueSnapshot]
   private var records = ArrayBuffer.empty[ActivationRecord]
+  private var predictions = ArrayBuffer.empty[PredictedTps]
 
   override def receive: Receive = {
     case s: QueueSnapshot =>
@@ -40,6 +43,8 @@ class StatusLogger(outDir: String) extends Actor with ActorLogging {
       snapshots += s
     case r: ActivationRecord =>
       records += r
+    case p: PredictedTps =>
+      predictions += p
   }
 
   override def postStop(): Unit = {
@@ -52,6 +57,7 @@ class StatusLogger(outDir: String) extends Actor with ActorLogging {
       }
       writeSnapshots(dir)
       writeActivations(dir)
+      writeTpsPredictions(dir)
     }
   }
 
@@ -77,6 +83,19 @@ class StatusLogger(outDir: String) extends Actor with ActorLogging {
     writer.write("elapse,timeToServe,timeOfInvoke\n")
     records foreach { r =>
       writer.write(s"${r.elapse},${r.timeToServe},${r.timeOfInvoke}\n")
+    }
+
+    writer.close()
+  }
+
+  private def writeTpsPredictions(dir: File): Unit = {
+    val file = new File(dir, "predictions.csv")
+    log.info(s"write TPS predictions to ${file.getPath}")
+
+    val writer = new BufferedWriter(new FileWriter(file))
+    writer.write("elapse,predictedTps\n")
+    predictions foreach { p =>
+      writer.write(f"${p.elapse},${p.tps}%.2f\n")
     }
 
     writer.close()
