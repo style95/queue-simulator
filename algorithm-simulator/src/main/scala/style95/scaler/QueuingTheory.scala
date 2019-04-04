@@ -42,7 +42,7 @@ class QueuingTheory(
     // Since we are looking at the future, we can assume all the initialing containers to be ready.
     val readyContainer = existing.size + creating.size
     // a lower bound of container number is calculated the queuing equations.
-    val lowerBound = deriveRequired(forecast, invokeTime)
+    val lowerBound = deriveRequired(forecast, invokeTime, slo)
 
     println(s"forecast: $forecast ,container: $readyContainer, lb: $lowerBound")
 
@@ -73,7 +73,7 @@ class QueuingTheory(
     s
   }
 
-  private def deriveRequired(tps: Double, invokeTime: FiniteDuration): Int = {
+  private def deriveRequired(tps: Double, invokeTime: FiniteDuration, slo: FiniteDuration): Int = {
     if (tps <= 0.01) {
       // The smoothing tps will only approaching zero.
       // Here a rather arbitrary threshold is applied to make sure
